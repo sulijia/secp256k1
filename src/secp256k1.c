@@ -802,7 +802,30 @@ int secp256k1_tagged_sha256(const secp256k1_context* ctx, unsigned char *hash32,
     secp256k1_sha256_finalize(&sha, hash32);
     return 1;
 }
+int secp256k1_genKeyPair(unsigned char* random, unsigned char* prvKey, unsigned char* pubKey)
+{
+    secp256k1_scalar s;
+    int overflow = 0;
+    secp256k1_pubkey point;
+    unsigned char s_b32[32];
+    unsigned char point_ser[33];
+    size_t point_ser_len = sizeof(point_ser);
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 
+    /*random_scalar_order(&s);*/
+    secp256k1_scalar_set_b32(&s, random, &overflow);
+    if (overflow || secp256k1_scalar_is_zero(&s)) {
+        return 0;
+    }
+    secp256k1_scalar_get_b32(s_b32, &s);
+    /* compute using ECDH function */
+    secp256k1_ec_pubkey_create(ctx, &point, random);
+    secp256k1_ec_pubkey_serialize(ctx, point_ser, &point_ser_len, &point, SECP256K1_EC_COMPRESSED);
+    memcpy(pubKey, point_ser, 33);
+    memcpy(prvKey, random, 32);
+    secp256k1_context_destroy(ctx);
+    return 1;
+}
 #ifdef ENABLE_MODULE_ECDH
 # include "modules/ecdh/main_impl.h"
 #endif
